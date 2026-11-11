@@ -1,0 +1,57 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-heroforce}
+      POSTGRES_USER: ${POSTGRES_USER:-heroforce}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-heroforce}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-heroforce} -d ${POSTGRES_DB:-heroforce}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_NAME: ${POSTGRES_DB:-heroforce}
+      DATABASE_USER: ${POSTGRES_USER:-heroforce}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-heroforce}
+      DATABASE_SYNCHRONIZE: ${DATABASE_SYNCHRONIZE:-true}
+      JWT_SECRET: ${JWT_SECRET:-desenvolvimento-altere-em-producao}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-8h}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+      ADMIN_NAME: ${ADMIN_NAME:-Nick Fury}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@heroforce.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin@123}
+      ADMIN_CHARACTER: ${ADMIN_CHARACTER:-Nick Fury}
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:3000/api}
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+
