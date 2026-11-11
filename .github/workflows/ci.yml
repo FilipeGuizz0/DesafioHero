@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  quality:
+    name: Lint, build and tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Install backend dependencies
+        run: npm ci --prefix backend
+
+      - name: Install frontend dependencies
+        run: npm ci --prefix frontend
+
+      - name: Lint backend
+        run: npx eslint "src/**/*.ts"
+        working-directory: backend
+
+      - name: Lint frontend
+        run: npm run lint --prefix frontend
+
+      - name: Build
+        run: npm run build
+
+      - name: Test backend
+        run: npm test --prefix backend -- --runInBand
+
+      - name: Test frontend
+        run: npm test --prefix frontend
+
